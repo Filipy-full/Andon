@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { initialGalpones, initialZonas, initialMaquinas, initialAlerts } from '../data/initialData';
+import { supabase } from '../supabaseClient';
 
 const AppContext = createContext(null);
 
@@ -44,6 +45,9 @@ function reducer(state, action) {
         ),
       };
 
+    case 'REMOVE_ALERTA':
+      return { ...state, alertas: state.alertas.filter(a => a.id !== action.id) };
+
     /* ── Galpones CRUD ───────────────────────────────────────────────── */
     case 'ADD_GALPON':
       return { ...state, galpones: [...state.galpones, action.payload] };
@@ -84,6 +88,45 @@ function reducer(state, action) {
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
+
+  useEffect(() => {
+    let channel;
+
+    async function syncAlerts() {
+      const { data, error } = await supabase
+        .from('alertas')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('No se pudieron cargar las alertas desde Supabase.', error.message);
+        return;
+      }
+
+      dispatch({
+        type: 'SYNC_STATE',
+        payload: { ...loadState(), alertas: data || [] },
+      });
+    }
+
+    syncAlerts();
+    channel = supabase
+      .channel('alertas-sync')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alertas' }, ({ new: alerta }) => {
+        dispatch({ type: 'ADD_ALERTA', payload: alerta });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'alertas' }, ({ new: alerta }) => {
+        dispatch({ type: 'UPDATE_ALERTA_STATUS', id: alerta.id, estado: alerta.estado });
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'alertas' }, ({ old: alerta }) => {
+        dispatch({ type: 'REMOVE_ALERTA', id: alerta.id });
+      })
+      .subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
 
   // 1. Guardar cualquier cambio de estado localmente para persistencia
   useEffect(() => {
