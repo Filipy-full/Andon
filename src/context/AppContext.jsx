@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { initialGalpones, initialZonas, initialMaquinas, initialAlerts } from '../data/initialData';
 import { supabase } from '../supabaseClient';
 
@@ -31,6 +31,9 @@ function reducer(state, action) {
   switch (action.type) {
     case 'SYNC_STATE':
       return action.payload;
+
+    case 'SYNC_CONFIG':
+      return { ...state, ...action.payload };
 
     /* ── Alertas ─────────────────────────────────────────────────────── */
     case 'ADD_ALERTA':
@@ -88,6 +91,15 @@ function reducer(state, action) {
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
+  const configHydratedRef = useRef(false);
+  const lastRemoteConfigRef = useRef(null);
+
+  const configPayload = {
+    galpones: state.galpones,
+    zonas: state.zonas,
+    maquinas: state.maquinas,
+  };
+  const serializedConfig = JSON.stringify(configPayload);
 
   useEffect(() => {
     let channel;
@@ -127,6 +139,72 @@ export function AppProvider({ children }) {
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    let channel;
+
+    async function syncConfiguration() {
+      const { data, error } = await supabase
+        .from('app_state')
+        .select('payload')
+        .eq('id', 'global')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('No se pudo cargar la configuración compartida.', error.message);
+      } else if (data?.payload) {
+        const remoteConfig = {
+          galpones: data.payload.galpones || initialGalpones,
+          zonas: data.payload.zonas || initialZonas,
+          maquinas: data.payload.maquinas || initialMaquinas,
+        };
+        lastRemoteConfigRef.current = JSON.stringify(remoteConfig);
+        dispatch({ type: 'SYNC_CONFIG', payload: remoteConfig });
+      } else {
+        const { error: insertError } = await supabase
+          .from('app_state')
+          .insert({ id: 'global', payload: configPayload, updated_at: new Date().toISOString() });
+        if (insertError && insertError.code !== '23505') {
+          console.warn('No se pudo inicializar la configuración compartida.', insertError.message);
+        }
+      }
+
+      configHydratedRef.current = true;
+    }
+
+    syncConfiguration();
+    const applyRemoteConfig = ({ new: record }) => {
+        const remoteConfig = record.payload || {};
+        lastRemoteConfigRef.current = JSON.stringify(remoteConfig);
+        dispatch({ type: 'SYNC_CONFIG', payload: remoteConfig });
+    };
+
+    channel = supabase
+      .channel('app-state-sync')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'app_state', filter: 'id=eq.global' }, applyRemoteConfig)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.global' }, applyRemoteConfig)
+      .subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!configHydratedRef.current) return;
+
+    if (lastRemoteConfigRef.current === serializedConfig) {
+      lastRemoteConfigRef.current = null;
+      return;
+    }
+
+    supabase
+      .from('app_state')
+      .upsert({ id: 'global', payload: configPayload, updated_at: new Date().toISOString() })
+      .then(({ error }) => {
+        if (error) console.warn('No se pudo guardar la configuración compartida.', error.message);
+      });
+  }, [serializedConfig]);
 
   // 1. Guardar cualquier cambio de estado localmente para persistencia
   useEffect(() => {
