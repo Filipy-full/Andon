@@ -93,10 +93,10 @@ export function Layout({ children }) {
           <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent-emerald)', boxShadow: '0 0 8px rgba(16,185,129,0.6)' }} />
-              <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Demo Mode</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Centro de operaciones</span>
             </div>
             <div style={{ fontSize: '0.67rem', color: 'var(--text-faint)', lineHeight: 1.4 }}>
-              {state.galpones.length} galpones · {state.zonas.length} zonas · {state.maquinas.length} máquinas
+              {state.galpones.length} plantas · {state.zonas.length} zonas · {state.maquinas.length} activos
             </div>
           </div>
         </div>

@@ -66,7 +66,7 @@ export function SupervisorDashboard({ alerts = [], onStatusChange }) {
             <div className="flex items-center gap-2 mt-1">
               <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>
                 {isConnected ? <Zap size={11} /> : <Clock size={11} />}
-                {isConnected ? 'LIVE' : 'DEMO LOCAL'}
+                {isConnected ? 'LIVE' : 'SIN CONEXIÓN'}
               </span>
             </div>
           </div>

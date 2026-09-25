@@ -86,7 +86,7 @@ export function OperatorTerminal() {
       descripcion: descripcion,
       estado:      'Pendiente',
       foto_base64: photo,
-      operario_id: 'OP-42',
+      operario_id: 'operador-movil',
       created_at:  new Date().toISOString(),
     };
     try {

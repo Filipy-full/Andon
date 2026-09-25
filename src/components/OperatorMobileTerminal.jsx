@@ -222,7 +222,7 @@ export function OperatorMobileTerminal({ onAlertCreated, alerts = [] }) {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Terminal Operario</span>
-            <span className="text-xs mono text-zinc-600">· OP-42</span>
+            <span className="text-xs mono text-zinc-600">· TERMINAL MÓVIL</span>
           </div>
           <h2 className="text-3xl font-black text-white">Emitir Incidencia</h2>
         </div>
