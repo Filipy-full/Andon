@@ -6,7 +6,6 @@ import { Dashboard } from './components/Dashboard';
 import { OperatorTerminal } from './components/OperatorTerminal';
 import { TVBoard } from './components/TVBoard';
 import { AdminPanel } from './components/AdminPanel';
-import './index.css';
 
 function App() {
   return (
